@@ -21,11 +21,14 @@ def compute_quantum_metric(lattice: object, nugget_field: np.ndarray, temporal_e
         L = 1.0  # AdS radius
         G = 6.67430e-11  # Gravitational constant
         c = 2.99792458e8  # Speed of light
+        j6_scale = 1e-30
+        epsilon = 1e-15
         for idx in np.ndindex(grid_size):
             z = np.sum(np.abs(np.array(idx) - np.array(grid_size)/2)) / np.sum(grid_size)
             psi_abs_sq = np.mean(np.abs(psi[idx])**2)
             j4_abs = np.abs(j4_field[idx])
-            boundary_nonlinear = (psi_abs_sq * j4_abs**3)**6 / (1e-30 + 1e-15)  # J^6-like term
+            # Unsimplified AdS boundary factor
+            boundary_nonlinear = (psi_abs_sq * j4_abs**3)**6 / (j6_scale + epsilon)
             boundary_factor = np.exp(-0.1 * z) * (1 + 0.001 * boundary_nonlinear)
             metric[idx + (0, 0)] = -1.0 / (L**2 * (1 + z**2)) * boundary_factor
             for i in range(1, 6):
@@ -40,9 +43,9 @@ def compute_quantum_metric(lattice: object, nugget_field: np.ndarray, temporal_e
         phi_norm = np.abs(nugget_field) / (np.max(np.abs(nugget_field)) + 1e-10)
         psi_norm = np.abs(temporal_entanglement)**2
         for idx in np.ndindex(grid_size):
-            bary_weights = lattice.get_barycentric_weights(idx)
+            bary_weights = lattice.get_barycentric_weights(idx, body_positions)
             perturbation = 0.1 * phi_norm[idx] + 0.05 * psi_norm[idx]
-            napoleon_factor = 1 + 0.05 * np.cos(3 * np.sum(idx))
+            napoleon_factor = lattice.get_napoleon_factor(idx, body_positions)
             boundary_factor = np.exp(-0.1 * np.sum(np.abs(np.array(idx) - np.array(grid_size)/2)))
             for i in range(6):
                 metric[idx + (i, i)] *= (1.0 + perturbation * np.sum(bary_weights) * napoleon_factor * boundary_factor)
@@ -55,9 +58,11 @@ def compute_quantum_metric(lattice: object, nugget_field: np.ndarray, temporal_e
                 inverse_metric[idx] = np.eye(6)
                 logger.warning("Singular metric at %s, using identity matrix", idx)
         
-        logger.debug("Metric computed: mean_diag=%.6f, std_diag=%.6f, boundary_factor=%.6f, boundary_nonlinear=%.6e", 
+        dist_sum = (sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                        for p2 in body_positions[i+1:]) if body_positions else 0.0)
+        logger.debug("Metric computed: mean_diag=%.6f, std_diag=%.6f, boundary_factor=%.6f, boundary_nonlinear=%.6e, body_dist_sum=%.6f", 
                      np.mean(np.diagonal(metric, axis1=-2, axis2=-1)), 
-                     np.std(np.diagonal(metric, axis1=-2, axis2=-1)), boundary_factor, boundary_nonlinear)
+                     np.std(np.diagonal(metric, axis1=-2, axis2=-1)), boundary_factor, boundary_nonlinear, dist_sum)
         return metric, inverse_metric
     except Exception as e:
         logger.error("Quantum metric computation failed: %s", e)
