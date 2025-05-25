@@ -18,8 +18,9 @@ def initialize_graviton_field(grid_size: tuple, deltas: list) -> np.ndarray:
 
 def evolve_graviton_field(graviton_field: np.ndarray, grid_size: tuple, deltas: list, dt: float,
                           scalar_field: np.ndarray, ricci_scalar: np.ndarray, 
-                          psi: np.ndarray, j4_field: np.ndarray) -> tuple:
-    """Evolve the graviton field with non-linear J^6 coupling."""
+                          psi: np.ndarray, j4_field: np.ndarray,
+                          body_positions: list = None, body_masses: list = None) -> tuple:
+    """Evolve the graviton field with three-body gravitational sources."""
     try:
         dx = deltas[1]
         steps = []
@@ -30,13 +31,14 @@ def evolve_graviton_field(graviton_field: np.ndarray, grid_size: tuple, deltas: 
             laplacian += np.roll(h, 1, axis=dim) + np.roll(h, -1, axis=dim) - 2 * h
         laplacian /= dx**2
         
-        # Non-linear J^6 source term
-        scalar_mean = np.mean(np.abs(scalar_field)) if scalar_field.size > 0 else 0.0
-        rio_mean = np.mean(ricci_scalar) if ricci_scalar.size > 0 else 1.0
-        psi_abs_sq = np.mean(np.abs(psi)**2) if psi.size > 0 else 1.0
-        j4_abs = np.mean(np.abs(j4_field)) if j4_field.size > 0 else 0.0
-        j6_source = (scalar_mean**6 * rio_mean * psi_abs_sq * j4_abs**3) / (1e-30 + 1e-15)
-        source = 0.01 * scalar_mean * rio_mean * np.eye(6) + 0.001 * j6_source * np.eye(6)
+        # Three-body gravitational source
+        source = np.zeros_like(h)
+        if body_positions and body_masses:
+            G = 6.67430e-11  # Gravitational constant
+            for idx in np.ndindex(grid_size):
+                for i, (pos, mass) in enumerate(zip(body_positions, body_masses)):
+                    dist = np.sqrt(sum((np.array(idx[:3]) - pos)**2) + 1e-15)  # 3D distance
+                    source[idx] += G * mass / dist * np.eye(6)  # Simplified metric perturbation
         
         d2h_dt2 = laplacian + source
         new_h = h + dt * (h - np.roll(h, 1, axis=0)) / dt + 0.5 * dt**2 * d2h_dt2
@@ -49,12 +51,11 @@ def evolve_graviton_field(graviton_field: np.ndarray, grid_size: tuple, deltas: 
         graviton_trace = np.mean(np.trace(new_h, axis1=-2, axis2=-1))
         steps.append({
             "graviton_trace": graviton_trace,
-            "graviton_norm": np.linalg.norm(new_h),
-            "j6_source": j6_source
+            "graviton_norm": np.linalg.norm(new_h)
         })
         
-        logger.debug("Graviton field evolved: trace=%.6f, norm=%.6f, j6_source=%.6e", 
-                     steps[-1]["graviton_trace"], steps[-1]["graviton_norm"], steps[-1]["j6_source"])
+        logger.debug("Graviton field evolved: trace=%.6f, norm=%.6f", 
+                     steps[-1]["graviton_trace"], steps[-1]["graviton_norm"])
         return new_h, steps
     except Exception as e:
         logger.error("Graviton field evolution failed: %s", e)
