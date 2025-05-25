@@ -19,7 +19,8 @@ def visualize_scalar_field(field: np.ndarray, output_path: str) -> None:
         logger.error("Scalar field visualization failed: %s", e)
         raise
 
-def visualize_rio_field(ricci_scalar: np.ndarray, output_path: str, boundary_factor: float = 1.0) -> None:
+def visualize_rio_field(ricci_scalar: np.ndarray, output_path: str, boundary_factor: float = 1.0,
+                        body_positions: list = None) -> None:
     """Visualize the Rio Ricci scalar field (2D slice) with AdS boundary effects."""
     try:
         slice_2d = ricci_scalar[:, :, ricci_scalar.shape[2]//2, ricci_scalar.shape[3]//2, 0, 0]
@@ -29,7 +30,10 @@ def visualize_rio_field(ricci_scalar: np.ndarray, output_path: str, boundary_fac
         plt.title("Rio Ricci Scalar Slice")
         plt.savefig(output_path)
         plt.close()
-        logger.info("Rio Ricci scalar visualization saved to %s with boundary_factor=%.2f", output_path, boundary_factor)
+        dist_sum = (sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                        for p2 in body_positions[i+1:]) if body_positions else 0.0)
+        logger.info("Rio Ricci scalar visualization saved to %s with boundary_factor=%.2f, body_dist_sum=%.6f", 
+                    output_path, boundary_factor, dist_sum)
     except Exception as e:
         logger.error("Rio Ricci scalar visualization failed: %s", e)
         raise
