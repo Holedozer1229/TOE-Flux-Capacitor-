@@ -1,0 +1,38 @@
+cat << 'EOF' > .gitignore
+# Simulation outputs
+results/
+*.log
+*.npy
+*.png
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Environment and sensitive files
+.env
+*.env
+*.key
+*.pem
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+EOF
