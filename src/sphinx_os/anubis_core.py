@@ -46,8 +46,8 @@ class UnifiedSpacetimeSimulator:
             graviton_trace = np.mean(np.trace(self.graviton_field, axis1=-2, axis2=-1)) if self.graviton_field.size > 0 else 0.0
             graviton_nonlinear = np.abs(graviton_trace)**6 / (1e-30 + 1e-15)
             term1 = -r_6d**2 * np.cos(k * r_6d - omega * t)
-            term2 = 2 * r_6d * np.sin(k * r_6d - omega * t)
-            term3 = 2 * np.cos(k * r_6d - omega * t)
+            term2 = 2 * r_6d * np.sin(k * r_6d - self.omega * t)
+            term3 = 2 * np.cos(k * r_6d - self.omega * t)
             term4 = 0.1 * np.sin(1e-3 * r_6d) * (1 + 0.01 * graviton_trace + 0.001 * graviton_nonlinear)
             phi = -(term1 + term2 + term3 + term4)
             logger.debug("Scalar field computed: phi=%.6f, graviton_nonlinear=%.6e", phi, graviton_nonlinear)
