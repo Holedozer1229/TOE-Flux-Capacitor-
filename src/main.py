@@ -77,14 +77,13 @@ class FluxCapacitor:
             self.circuit = QuantumCircuit(self.num_qubits)
             self.circuit.apply_rydberg_gates(wormhole_nodes=True, phi=phi)
 
-    def run(self, audio_input: np.ndarray) -> np.ndarray:
+    def run(self, audio_input: np.ndarray, body_positions: list = None) -> np.ndarray:
         num_samples = int(self.sample_rate * self.duration)
         audio_input = np.tile(audio_input, int(np.ceil(num_samples / audio_input.size)))[:num_samples]
         audio_output = np.zeros(num_samples)
         self.initialize_spin_network()
         grid_center = np.array(self.grid_size) / 2
 
-        # J^6, CTC, and boundary parameter sweep
         j6_configs = [
             {'kappa_j6': kj, 'kappa_j6_eff': kje, 'j6_scaling_factor': jsf, 'epsilon': eps, 'resonance_frequency': rf}
             for kj in Constants.J6_PARAM_RANGES['kappa_j6']
@@ -105,10 +104,10 @@ class FluxCapacitor:
             for cwf in [0.5, 0.7]
             for caf in [0.2, 0.3]
         ]
-        boundary_factors = [0.8, 0.9, 1.0]  # AdS boundary factor range
+        boundary_factors = [0.8, 0.9, 1.0]
         
         results = []
-        for j6_config in j6_configs[:2]:  # Limit for testing
+        for j6_config in j6_configs[:2]:
             self.harmonic_gen.kappa_j6 = j6_config['kappa_j6']
             self.harmonic_gen.kappa_j6_eff = j6_config['kappa_j6_eff']
             self.harmonic_gen.j6_scaling_factor = j6_config['j6_scaling_factor']
@@ -124,8 +123,8 @@ class FluxCapacitor:
                         psi_abs_sq = np.mean(np.abs(psi)**2)
                         j4_abs = np.abs(j4)
                         graviton_field = self.simulator.sphinx_os.graviton_field if hasattr(self.simulator.sphinx_os, 'graviton_field') else np.zeros(self.grid_size + (6, 6))
-                        harmonics = self.harmonic_gen.generate_harmonics(phi, j4, psi, self.ricci_scalar, graviton_field, boundary_factor)
-                        ctc_effect = self.toe.simulator.compute_ctc_term(t, phi, harmonics, ctc_params=ctc_config)
+                        harmonics = self.harmonic_gen.generate_harmonics(phi, j4, psi, self.ricci_scalar, graviton_field, boundary_factor, body_positions=body_positions)
+                        ctc_effect = self.toe.simulator.compute_ctc_term(t, phi, harmonics, ctc_params=ctc_config, body_positions=body_positions)
                         self.circuit.apply_rydberg_gates(wormhole_nodes=True, phi=phi, ctc_feedback=ctc_effect, 
                                                         ctc_params=ctc_config, boundary_factor=boundary_factor,
                                                         psi_abs_sq=psi_abs_sq, j4_abs=j4_abs)
@@ -134,7 +133,8 @@ class FluxCapacitor:
                     
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     harmonic_peaks = self.harmonic_gen.analyze_harmonics(audio_output, 
-                                                                        os.path.join(self.results_dir, f'j6_harmonics_{timestamp}_tau{ctc_config["tau"]}_kappa{ctc_config["kappa_ctc"]}.png'))
+                                                                        os.path.join(self.results_dir, f'j6_harmonics_{timestamp}_tau{ctc_config["tau"]}_kappa{ctc_config["kappa_ctc"]}.png'),
+                                                                        body_positions=body_positions)
                     delay = self.harmonic_gen.analyze_delays(audio_output, audio_input)
                     entanglement_entropy = self.simulator.compute_entanglement_entropy()
                     self.entanglement_cache.cache_entropy(entanglement_entropy)
@@ -146,11 +146,9 @@ class FluxCapacitor:
                     ghz_amplified = self.circuit.compute_ghz_paradox(amplify=True, ctc_params=ctc_config)
                     j6_stats = self.harmonic_gen.analyze_j6_potential(phi, j4, psi, self.ricci_scalar, graviton_field, boundary_factor)
                     
-                    # Visualize Rio and graviton fields
-                    visualize_rio_field(self.ricci_scalar, os.path.join(self.results_dir, f'rio_field_{timestamp}.png'), boundary_factor)
+                    visualize_rio_field(self.ricci_scalar, os.path.join(self.results_dir, f'rio_field_{timestamp}.png'), boundary_factor, body_positions)
                     plot_graviton_field(graviton_field, os.path.join(self.results_dir, f'graviton_field_{timestamp}.png'))
                     
-                    # Statistical validation
                     harmonic_chi2 = stats.chisquare([1 if abs(p - 880) < 50 or abs(p - 1320) < 50 else 0 for p in harmonic_peaks[:2]], 
                                                    f_exp=[1, 1]).pvalue
                     delay_ttest = stats.ttest_1samp([delay], 0.050).pvalue
@@ -183,25 +181,6 @@ class FluxCapacitor:
                                 mabk_standard, mabk_amplified, ghz_standard, ghz_amplified, harmonic_chi2, delay_ttest, chsh_valid, mabk_valid, ghz_valid, 
                                 j6_stats['rio_mean'], j6_stats['graviton_trace'], j6_stats['graviton_nonlinear'])
         
-        # Plot validation metrics
-        for param in ['kappa_j6', 'resonance_frequency']:
-            param_values = [res['j6_config'][param] for res in results]
-            chsh_values = [res['chsh_amplified'] for res in results]
-            mabk_values = [res['mabk_amplified'] for res in results]
-            rio_values = [res['j6_stats']['rio_mean'] for res in results]
-            boundary_factors = [res['boundary_factor'] for res in results]
-            graviton_nonlinear = [res['j6_stats']['graviton_nonlinear'] for res in results]
-            plot_j6_validation(np.array(param_values), np.array(chsh_values), param, "CHSH Amplified", 
-                              os.path.join(self.results_dir, f'chsh_vs_{param}_{timestamp}.png'))
-            plot_j6_validation(np.array(param_values), np.array(mabk_values), param, "MABK Amplified (n=4)", 
-                              os.path.join(self.results_dir, f'mabk_vs_{param}_{timestamp}.png'))
-            plot_rio_validation(np.array(rio_values), np.array(chsh_values), "CHSH Amplified", 
-                               os.path.join(self.results_dir, f'chsh_vs_rio_{timestamp}.png'), boundary_factor)
-            visualize_boundary_correlations(np.array(chsh_values), np.array(boundary_factors), "CHSH Amplified", 
-                                           os.path.join(self.results_dir, f'chsh_vs_boundary_{timestamp}.png'))
-            plot_nonlinear_j6_metrics(np.array(graviton_nonlinear), np.array(chsh_values), "CHSH Amplified", 
-                                      os.path.join(self.results_dir, f'chsh_vs_graviton_nonlinear_{timestamp}.png'), "Non-Linear Graviton Term")
-        
         return audio_output
 
     def run_three_body_simulation(self, body_positions: list, body_masses: list, velocities: list, duration: float):
@@ -217,7 +196,7 @@ class FluxCapacitor:
             self.ricci_scalar = self.simulator.sphinx_os.ricci_scalar
             graviton_field = self.simulator.sphinx_os.graviton_field
             
-            # Update metric and graviton field with three-body sources
+            # Update metric, graviton field, curvature, and Nugget field
             self.simulator.sphinx_os.em_fields["metric"], _ = compute_quantum_metric(
                 self.simulator.lattice, self.simulator.sphinx_os.nugget_field, self.simulator.psi,
                 self.grid_size, self.simulator.sphinx_os.em_fields["J4"], self.simulator.psi,
@@ -227,6 +206,17 @@ class FluxCapacitor:
                 self.simulator.sphinx_os.graviton_field, self.grid_size, self.simulator.sphinx_os.deltas,
                 self.simulator.sphinx_os.dt, self.simulator.sphinx_os.nugget_field, self.ricci_scalar,
                 self.simulator.psi, self.simulator.sphinx_os.em_fields["J4"], body_positions, body_masses
+            )
+            _, self.ricci_scalar = compute_curvature(
+                self.simulator.sphinx_os.em_fields["metric"], 
+                np.linalg.inv(self.simulator.sphinx_os.em_fields["metric"]),
+                self.grid_size, self.simulator.sphinx_os.deltas[1], self.simulator.sphinx_os.nugget_field,
+                body_positions
+            )
+            self.simulator.sphinx_os.nugget_field, _ = evolve_nugget_field(
+                self.simulator.sphinx_os.nugget_field, self.grid_size, self.simulator.sphinx_os.deltas,
+                self.simulator.sphinx_os.dt, self.simulator.sphinx_os.graviton_field,
+                self.ricci_scalar, self.simulator.psi, j4, body_positions, body_masses
             )
             
             # Compute forces and update positions
@@ -249,13 +239,17 @@ class FluxCapacitor:
                 trajectories[i].append(body_positions[i].copy())
             
             # Generate harmonics
-            harmonics = self.harmonic_gen.generate_harmonics(phi, j4, psi, self.ricci_scalar, graviton_field)
+            harmonics = self.harmonic_gen.generate_harmonics(phi, j4, psi, self.ricci_scalar, graviton_field, 
+                                                            body_positions=body_positions)
             audio_output[i] = harmonics
         
         # Save trajectories
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         np.save(os.path.join(self.results_dir, f'trajectories_{timestamp}.npy'), np.array(trajectories))
-        logger.info("Three-body trajectories saved to %s", os.path.join(self.results_dir, f'trajectories_{timestamp}.npy'))
+        dist_sum = sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                       for p2 in body_positions[i+1:])
+        logger.info("Three-body trajectories saved to %s, dist_sum=%.6f", 
+                    os.path.join(self.results_dir, f'trajectories_{timestamp}.npy'), dist_sum)
         return audio_output
 
     def save_results(self, audio_output: np.ndarray, audio_input: np.ndarray, result: dict, 
