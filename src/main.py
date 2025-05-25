@@ -204,6 +204,60 @@ class FluxCapacitor:
         
         return audio_output
 
+    def run_three_body_simulation(self, body_positions: list, body_masses: list, velocities: list, duration: float):
+        """Simulate three-body motion and compute trajectories."""
+        num_samples = int(self.sample_rate * duration)
+        audio_output = np.zeros(num_samples)
+        trajectories = [[] for _ in range(3)]
+        
+        for i, t in enumerate(np.linspace(0, duration, num_samples)):
+            phi = self.compute_scalar_field(np.array(self.grid_size)/2, t)
+            j4 = np.mean(self.simulator.grid)
+            psi = self.simulator.psi
+            self.ricci_scalar = self.simulator.sphinx_os.ricci_scalar
+            graviton_field = self.simulator.sphinx_os.graviton_field
+            
+            # Update metric and graviton field with three-body sources
+            self.simulator.sphinx_os.em_fields["metric"], _ = compute_quantum_metric(
+                self.simulator.lattice, self.simulator.sphinx_os.nugget_field, self.simulator.psi,
+                self.grid_size, self.simulator.sphinx_os.em_fields["J4"], self.simulator.psi,
+                body_positions, body_masses
+            )
+            self.simulator.sphinx_os.graviton_field, _ = evolve_graviton_field(
+                self.simulator.sphinx_os.graviton_field, self.grid_size, self.simulator.sphinx_os.deltas,
+                self.simulator.sphinx_os.dt, self.simulator.sphinx_os.nugget_field, self.ricci_scalar,
+                self.simulator.psi, self.simulator.sphinx_os.em_fields["J4"], body_positions, body_masses
+            )
+            
+            # Compute forces and update positions
+            forces = []
+            G = 6.67430e-11
+            for i in range(3):
+                force = np.zeros(3)
+                for j in range(3):
+                    if i != j:
+                        r_ij = body_positions[j] - body_positions[i]
+                        dist = np.sqrt(np.sum(r_ij**2) + 1e-15)
+                        force += G * body_masses[i] * body_masses[j] * r_ij / dist**3
+                forces.append(force)
+            
+            # Update positions and velocities
+            dt = duration / num_samples
+            for i in range(3):
+                velocities[i] += forces[i] / body_masses[i] * dt
+                body_positions[i] += velocities[i] * dt
+                trajectories[i].append(body_positions[i].copy())
+            
+            # Generate harmonics
+            harmonics = self.harmonic_gen.generate_harmonics(phi, j4, psi, self.ricci_scalar, graviton_field)
+            audio_output[i] = harmonics
+        
+        # Save trajectories
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        np.save(os.path.join(self.results_dir, f'trajectories_{timestamp}.npy'), np.array(trajectories))
+        logger.info("Three-body trajectories saved to %s", os.path.join(self.results_dir, f'trajectories_{timestamp}.npy'))
+        return audio_output
+
     def save_results(self, audio_output: np.ndarray, audio_input: np.ndarray, result: dict, 
                      harmonic_chi2: float, delay_ttest: float, chsh_valid: bool, mabk_valid: bool, ghz_valid: bool) -> None:
         timestamp = result['timestamp']
