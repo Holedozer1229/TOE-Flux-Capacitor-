@@ -5,6 +5,12 @@ __all__ = [
     'arduino_interface',
     'unified_toe',
     'entanglement_cache',
+    'plotting',
     'constants',
-    'plotting'
+    'core',
+    'physics',
+    'utils',
+    'visualization',
+    'interface',
+    'sandbox'
 ]
