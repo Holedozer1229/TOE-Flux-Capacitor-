@@ -1,3 +1,5 @@
+# Save updated README.md to root
+cat << 'EOF' > README.md
 # TOE Flux Capacitor ⚛️☢️
 
 [![PyPI version](https://badge.fury.io/py/toe-flux-capacitor.svg)](https://pypi.org/project/toe-flux-capacitor/)
