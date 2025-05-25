@@ -14,7 +14,7 @@ def visualize_scalar_field(field: np.ndarray, output_path: str) -> None:
         plt.title("Nugget Scalar Field Slice")
         plt.savefig(output_path)
         plt.close()
-        logger.info("Scalar field visualization saved to %s", output_path)
+        logger.info("Nugget scalar field visualization saved to %s", output_path)
     except Exception as e:
         logger.error("Scalar field visualization failed: %s", e)
         raise
@@ -49,4 +49,23 @@ def visualize_boundary_correlations(entanglement_metrics: np.ndarray, boundary_f
         logger.info("Boundary correlations visualization saved to %s", output_path)
     except Exception as e:
         logger.error("Boundary correlations visualization failed: %s", e)
+        raise
+
+def visualize_trajectories(trajectories: np.ndarray, output_path: str) -> None:
+    """Visualize three-body trajectories in 2D projection."""
+    try:
+        plt.figure(figsize=(10, 8))
+        for i, traj in enumerate(trajectories):
+            traj = np.array(traj)
+            plt.plot(traj[:, 0], traj[:, 1], label=f'Body {i+1}')
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("Three-Body Trajectories")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(output_path)
+        plt.close()
+        logger.info("Trajectories visualization saved to %s", output_path)
+    except Exception as e:
+        logger.error("Trajectories visualization failed: %s", e)
         raise
