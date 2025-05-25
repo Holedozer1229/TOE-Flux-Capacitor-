@@ -7,8 +7,9 @@ def compute_j6_potential(phi: np.ndarray, j4: np.ndarray, psi: np.ndarray, ricci
                          graviton_field: np.ndarray = None, kappa_j6: float = 1.0, 
                          kappa_j6_eff: float = 1e-33, j6_scaling_factor: float = 1e-30,
                          epsilon: float = 1e-15, omega_res: float = 2 * np.pi * 1e6,
-                         boundary_factor: float = 1.0) -> tuple:
-    """Compute the unified J^6 coupling potential with non-linear graviton and AdS boundary effects."""
+                         boundary_factor: float = 1.0, body_positions: list = None,
+                         body_masses: list = None) -> tuple:
+    """Compute the unified J^6 coupling potential with non-linear graviton, AdS boundary, and three-body effects."""
     try:
         phi_abs = np.abs(phi)
         denom = 1 + 0.01 * phi_abs
@@ -27,6 +28,14 @@ def compute_j6_potential(phi: np.ndarray, j4: np.ndarray, psi: np.ndarray, ricci
         graviton_trace = np.mean(np.trace(graviton_field, axis1=-2, axis2=-1)) if graviton_field is not None else 0.0
         graviton_nonlinear = np.abs(graviton_trace)**6 / (j6_scaling_factor + epsilon)  # J^6-like term
         graviton_factor = 1 + 0.01 * graviton_trace + 0.001 * graviton_nonlinear  # Combined linear and non-linear
+        
+        # Three-body influence
+        if body_positions and body_masses:
+            G = 6.67430e-11  # Gravitational constant
+            for idx in np.ndindex(phi.shape):
+                for pos, mass in zip(body_positions, body_masses):
+                    dist = np.sqrt(sum((np.array(idx[:3]) - pos)**2) + 1e-15)
+                    phi_term[idx] += G * mass / dist  # Gravitational potential contribution
         
         # Barycentric interpolation for Rio smoothness
         bary_weights = np.array([0.25, 0.25, 0.25, 0.25])
