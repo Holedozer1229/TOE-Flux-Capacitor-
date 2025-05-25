@@ -1,0 +1,11 @@
+cat << 'EOF' > MANIFEST.in
+include src/sphinx_os/*.py
+include src/sphinx_os/**/*.py
+include docs/*.md
+include requirements.txt
+include LICENSE
+exclude results/*
+exclude *.log
+exclude *.npy
+exclude *.png
+EOF
