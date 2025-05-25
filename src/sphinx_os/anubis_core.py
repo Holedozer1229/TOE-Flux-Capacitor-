@@ -12,9 +12,10 @@ from .constants import Constants
 logger = logging.getLogger(__name__)
 
 class UnifiedSpacetimeSimulator:
-    """Core simulator for 6D spacetime with non-linear J^6 coupling."""
+    """Core simulator for 6D spacetime with non-linear J^6 coupling and three-body dynamics."""
     
     def __init__(self, grid_size: tuple, lambda_eigen: float):
+        """Initialize the simulator with 6D lattice and fields."""
         self.grid_size = grid_size
         self.lambda_eigen = lambda_eigen
         self.lattice = TetrahedralLattice(grid_size)
@@ -25,10 +26,10 @@ class UnifiedSpacetimeSimulator:
         self.ricci_scalar = np.ones(grid_size, dtype=np.float64)
         self.graviton_field = np.zeros(grid_size + (6, 6), dtype=np.float64)
         self.sphinx_os = None  # Will be set by UnifiedTOE
-        logger.info("Simulator initialized with grid size %s", grid_size)
+        logger.info("Simulator initialized with grid size %s, lambda_eigen=%.6f", grid_size, lambda_eigen)
     
     def initialize_tetrahedral_lattice(self):
-        """Initialize the 6D tetrahedral lattice."""
+        """Initialize the 6D tetrahedral lattice with random perturbations."""
         try:
             self.grid = np.random.normal(0, 1e-5, self.grid_size)
             logger.debug("Tetrahedral lattice initialized")
@@ -44,13 +45,14 @@ class UnifiedSpacetimeSimulator:
             k = Constants.K / Constants.DELTA_X
             omega = 2 * np.pi / (100 * Constants.DELTA_T)
             graviton_trace = np.mean(np.trace(self.graviton_field, axis1=-2, axis2=-1)) if self.graviton_field.size > 0 else 0.0
-            graviton_nonlinear = np.abs(graviton_trace)**6 / (1e-30 + 1e-15)
+            graviton_nonlinear = np.abs(graviton_trace)**6 / (1e-30 + 1e-15)  # Unsimplified J^6-like term
             term1 = -r_6d**2 * np.cos(k * r_6d - omega * t)
-            term2 = 2 * r_6d * np.sin(k * r_6d - self.omega * t)
-            term3 = 2 * np.cos(k * r_6d - self.omega * t)
+            term2 = 2 * r_6d * np.sin(k * r_6d - omega * t)
+            term3 = 2 * np.cos(k * r_6d - omega * t)
             term4 = 0.1 * np.sin(1e-3 * r_6d) * (1 + 0.01 * graviton_trace + 0.001 * graviton_nonlinear)
             phi = -(term1 + term2 + term3 + term4)
-            logger.debug("Scalar field computed: phi=%.6f, graviton_nonlinear=%.6e", phi, graviton_nonlinear)
+            logger.debug("Scalar field computed: phi=%.6f, graviton_trace=%.6f, graviton_nonlinear=%.6e", 
+                         phi, graviton_trace, graviton_nonlinear)
             return phi
         except Exception as e:
             logger.error("Scalar field computation failed: %s", e)
@@ -58,18 +60,26 @@ class UnifiedSpacetimeSimulator:
     
     def compute_ctc_term(self, t: float, phi: float, j6_modulation: float, ctc_params: dict = None,
                          body_positions: list = None) -> float:
-        """Compute CTC term with non-linear J^6-coupled AdS boundary and three-body effects."""
+        """Compute CTC term with unsimplified J^6-coupled AdS boundary and three-body effects."""
         try:
             ctc_params = ctc_params or {'tau': 1.0, 'kappa_ctc': 0.5}
             tau = ctc_params.get('tau', 1.0)
             kappa_ctc = ctc_params.get('kappa_ctc', 0.5)
             z = np.sum(np.abs(np.array(self.grid_size) / 2)) / np.sum(self.grid_size)
-            boundary_factor = np.exp(-0.1 * z) * (1 + 0.001 * (j6_modulation**6 / (1e-30 + 1e-15)))
+            j6_scale = 1e-30
+            epsilon = 1e-15
+            # Unsimplified AdS boundary factor with non-linear J^6 term
+            boundary_factor = np.exp(-0.1 * z) * (1 + 0.001 * (j6_modulation**6 / (j6_scale + epsilon)))
             ctc_term = kappa_ctc * np.sin(phi * t / tau) * j6_modulation * boundary_factor
+            
+            # Three-body distance modulation
             if body_positions:
-                dist_sum = sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) for p2 in body_positions[i+1:])
+                dist_sum = sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                               for p2 in body_positions[i+1:])
                 ctc_term *= np.exp(-0.01 * dist_sum)  # Modulate by inter-body distances
-            logger.debug("CTC term computed: ctc_term=%.6f, boundary_factor=%.6f", ctc_term, boundary_factor)
+            
+            logger.debug("CTC term computed: ctc_term=%.6f, boundary_factor=%.6f, dist_sum=%s", 
+                         ctc_term, boundary_factor, dist_sum if body_positions else "N/A")
             return ctc_term
         except Exception as e:
             logger.error("CTC term computation failed: %s", e)
