@@ -19,18 +19,21 @@ class HarmonicGenerator:
         logger.info("Harmonic generator initialized with sample_rate=%d", sample_rate)
     
     def generate_harmonics(self, phi: float, j4: float, psi: np.ndarray, ricci_scalar: np.ndarray,
-                           graviton_field: np.ndarray = None, boundary_factor: float = 1.0) -> np.ndarray:
+                           graviton_field: np.ndarray = None, boundary_factor: float = 1.0,
+                           body_positions: list = None) -> np.ndarray:
         """Generate harmonics with non-linear J^6-coupled graviton and boundary effects."""
         try:
             V_j6, _ = compute_j6_potential(
                 np.array([phi]), np.array([j4]), psi, ricci_scalar, graviton_field,
                 self.kappa_j6, self.kappa_j6_eff, self.j6_scaling_factor, self.epsilon,
-                self.omega_res, boundary_factor
+                self.omega_res, boundary_factor, body_positions=body_positions
             )
             harmonics = np.sin(2 * np.pi * V_j6 / self.sample_rate)
             harmonics = np.clip(harmonics, -1.0, 1.0)
-            logger.debug("Harmonics generated: mean=%.6f, boundary_factor=%.6f", 
-                         np.mean(harmonics), boundary_factor)
+            dist_sum = (sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                            for p2 in body_positions[i+1:]) if body_positions else 0.0)
+            logger.debug("Harmonics generated: mean=%.6f, boundary_factor=%.6f, body_dist_sum=%.6f", 
+                         np.mean(harmonics), boundary_factor, dist_sum)
             return harmonics
         except Exception as e:
             logger.error("Harmonics generation failed: %s", e)
@@ -44,11 +47,9 @@ class HarmonicGenerator:
             peaks, _ = find_peaks(spectrum[:len(spectrum)//2], height=np.max(spectrum)/10)
             peak_freqs = freqs[peaks]
             peak_freqs = peak_freqs[peak_freqs > 0]
-            if body_positions:
-                # Log inter-body distances
-                dist_sum = sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) for p2 in body_positions[i+1:])
-                logger.info("Three-body distances: sum=%.6f, harmonic peaks=%s", dist_sum, peak_freqs)
-            logger.info("Harmonic peaks detected: %s", peak_freqs)
+            dist_sum = (sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                            for p2 in body_positions[i+1:]) if body_positions else 0.0)
+            logger.info("Harmonic peaks detected: %s, body_dist_sum=%.6f", peak_freqs, dist_sum)
             return peak_freqs.tolist()
         except Exception as e:
             logger.error("Harmonic analysis failed: %s", e)
