@@ -1,0 +1,45 @@
+cat << 'EOF' > pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toe-flux-capacitor"
+version = "0.1.0"
+description = "A computational and hardware-integrated framework for a unified Theory of Everything, simulating quantum-gravity and three-body dynamics with the Rio Ricci Scalar."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Travis D. Jones", email = "holedozer@icloud.com"},
+    {name = "Grok (xAI)"}
+]
+dependencies = [
+    "numpy==1.21.0",
+    "matplotlib==3.4.2",
+    "scipy==1.7.0",
+    "tensornetwork==0.4.6",
+    "sounddevice==0.4.2",
+    "pytest==6.2.4"
+]
+keywords = ["quantum-gravity", "three-body-problem", "AdS-CFT", "TOE", "gravitational-waves", "entanglement", "6D-lattice"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Intended Audience :: Science/Research",
+    "Development Status :: 3 - Alpha"
+]
+
+[project.urls]
+Homepage = "https://github.com/Holedozer1229/TOE-Flux-Capacitor-"
+Documentation = "https://github.com/Holedozer1229/TOE-Flux-Capacitor-/blob/main/docs/MANUSCRIPT.md"
+Repository = "https://github.com/Holedozer1229/TOE-Flux-Capacitor-"
+"Bug Tracker" = "https://github.com/Holedozer1229/TOE-Flux-Capacitor-/issues"
+"X Announcement" = "https://x.com/your-post-url"
+EOF
