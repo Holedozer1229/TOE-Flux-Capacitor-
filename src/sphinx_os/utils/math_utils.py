@@ -64,8 +64,10 @@ def compute_j6_potential(phi: np.ndarray, j4: np.ndarray, psi: np.ndarray, ricci
             phi_abs**6 * (np.cos(phi) * denom - 0.01 * np.sin(phi) * np.sign(phi)) / denom**2
         )
         
-        logger.debug("J^6 potential: mean=%.6e, rio_mean=%.6f, rio_std=%.6f, graviton_trace=%.6f, graviton_nonlinear=%.6e, boundary_factor=%.6f, boundary_nonlinear=%.6e", 
-                     np.mean(V_j6), ricci_mean, ricci_std, graviton_trace, graviton_nonlinear, boundary_factor, boundary_nonlinear)
+        dist_sum = (sum(np.sqrt(sum((p1 - p2)**2)) for i, p1 in enumerate(body_positions) 
+                        for p2 in body_positions[i+1:]) if body_positions else 0.0)
+        logger.debug("J^6 potential: mean=%.6e, rio_mean=%.6f, rio_std=%.6f, graviton_trace=%.6f, graviton_nonlinear=%.6e, boundary_factor=%.6f, boundary_nonlinear=%.6e, body_dist_sum=%.6f", 
+                     np.mean(V_j6), ricci_mean, ricci_std, graviton_trace, graviton_nonlinear, boundary_factor, boundary_nonlinear, dist_sum)
         return V_j6, dV_j6_dphi
     except Exception as e:
         logger.error("J^6 potential computation failed: %s", e)
