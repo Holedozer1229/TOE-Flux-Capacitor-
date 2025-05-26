@@ -6,3 +6,4 @@ sounddevice==0.4.2
 pyserial==3.5
 ecdsa==0.17.0
 tensornetwork==0.4.6
+pennylane==0.36.0
