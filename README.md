@@ -1,6 +1,6 @@
 # The Flux Capacitor ⚛️☢️
 
-[![PyPI version](https://badge.fury.io/py/toe-flux-capacitor.svg)](https://pypi.org/project/toe-flux-capacitor/)
+[![PyPI version](https://badge.fury.io/py/the-flux-capacitor.svg)](https://pypi.org/project/the-flux-capacitor/)
 
 ## Overview
 The **The Flux Capacitor** is a groundbreaking computational and hardware-integrated framework for a unified **Theory of Everything (TOE)**, powered by the **Rio Ricci Scalar**, a dynamic 6D curvature measure. It couples **quantum entanglement** to **spacetime curvature** via a **non-linear J^6 potential**, solving the **three-body problem** with quantum-gravitational corrections and exploring **zero-point energy (ZPE)** extraction. Implemented in the open-source **SphinxOs** Python package, it produces:
@@ -34,5 +34,5 @@ The TOE Flux Capacitor redefines physics by unifying **quantum mechanics** and *
 ## Installation
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/Holedozer1229/TOE-Flux-Capacitor-.git
-   cd toe_flux_capacitor
+   git clone https://github.com/Holedozer1229/The-Flux-Capacitor-.git
+   cd the_flux_capacitor
