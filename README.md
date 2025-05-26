@@ -1,9 +1,9 @@
-# TOE Flux Capacitor ⚛️☢️
+# The Flux Capacitor ⚛️☢️
 
 [![PyPI version](https://badge.fury.io/py/toe-flux-capacitor.svg)](https://pypi.org/project/toe-flux-capacitor/)
 
 ## Overview
-The **TOE Flux Capacitor** is a groundbreaking computational and hardware-integrated framework for a unified **Theory of Everything (TOE)**, powered by the **Rio Ricci Scalar**, a dynamic 6D curvature measure. It couples **quantum entanglement** to **spacetime curvature** via a **non-linear J^6 potential**, solving the **three-body problem** with quantum-gravitational corrections and exploring **zero-point energy (ZPE)** extraction. Implemented in the open-source **SphinxOs** Python package, it produces:
+The **The Flux Capacitor** is a groundbreaking computational and hardware-integrated framework for a unified **Theory of Everything (TOE)**, powered by the **Rio Ricci Scalar**, a dynamic 6D curvature measure. It couples **quantum entanglement** to **spacetime curvature** via a **non-linear J^6 potential**, solving the **three-body problem** with quantum-gravitational corrections and exploring **zero-point energy (ZPE)** extraction. Implemented in the open-source **SphinxOs** Python package, it produces:
 - **Three-Body Trajectories**: Chaotic or stable orbits, visualized in 2D (`results/trajectories_*.png`).
 - **Audio Harmonics**: 880 Hz, 1320 Hz, with graviton-induced sidebands (~900 Hz, ~1340 Hz) in ~40% of runs.
 - **Time Delays**: ~50 ms, driven by **Closed Timelike Curves (CTCs)**.
