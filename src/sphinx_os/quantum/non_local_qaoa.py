@@ -8,7 +8,7 @@ from ...audio.oam_audio_modulator import OAMAudioModulator
 logger = logging.getLogger(__name__)
 
 class NonLocalQAOA:
-    """Non-local QAOA algorithm with CTC gates and J^6 potential for quantum optimization."""
+    """Non-local QAOA algorithm with enhanced CTC gates and J^6 potential."""
     
     def __init__(self, n_qubits=6, n_layers=3, dev_type="default.qubit"):
         """Initialize the non-local QAOA model."""
@@ -26,19 +26,23 @@ class NonLocalQAOA:
             np.array([phi]), np.array([j4]), psi, ricci_scalar, graviton_field,
             body_positions=body_positions, body_masses=body_masses
         )
-        # Cost function with OAM influence
         cost = np.mean(V_j6) * (1 + 0.01 * oam)
         return cost
     
-    def ctc_non_local_gate(self, wires, phi, t):
-        """Apply CTC-inspired non-local gate."""
+    def ctc_non_local_gate(self, wires, phi, t, oam):
+        """Apply enhanced CTC-inspired non-local gates."""
         ctc_term = Constants.CTC_PARAMS['kappa_ctc'] * np.sin(phi * t / Constants.CTC_PARAMS['tau'])
+        # Single-qubit CTC gate
         for w in wires:
-            qml.RZ(ctc_term, wires=w)
+            qml.RZ(ctc_term * (1 + 0.001 * oam), wires=w)
+        # Controlled CTC gate (non-local coupling)
+        if len(wires) > 1:
+            for i in range(len(wires) - 1):
+                qml.ControlledPhaseShift(ctc_term * 0.1, wires=[wires[i], wires[i + 1]])
     
     @qml.qnode(device=None)
-    def circuit(self, inputs, gamma, beta, t=0.0):
-        """Non-local QAOA circuit with CTC and holographic encoding."""
+    def circuit(self, inputs, gamma, beta, t=0.0, oam=0.0):
+        """Non-local QAOA circuit with enhanced CTC gates."""
         # Holographic encoding
         for i in range(self.n_qubits):
             qml.Hadamard(wires=i)
@@ -52,8 +56,8 @@ class NonLocalQAOA:
             for i in range(self.n_qubits - 1):
                 qml.CNOT(wires=[i, i + 1])
             
-            # Non-local CTC gate
-            self.ctc_non_local_gate(wires=[0, 1], phi=inputs[0], t=t)
+            # Enhanced CTC gates (all qubits)
+            self.ctc_non_local_gate(wires=list(range(self.n_qubits)), phi=inputs[0], t=t, oam=oam)
             
             # Mixer Hamiltonian
             for i in range(self.n_qubits):
@@ -92,7 +96,7 @@ class NonLocalQAOA:
             # Optimize parameters
             def cost_fn(params):
                 gamma, beta = params[:self.n_layers], params[self.n_layers:]
-                return np.mean(self.circuit(inputs, gamma, beta, t=epoch * 0.01))
+                return np.mean(self.circuit(inputs, gamma, beta, t=epoch * 0.01, oam=oam))
             
             params = np.concatenate([gamma, beta])
             params, circuit_cost = opt.step_and_cost(cost_fn, params)
@@ -105,9 +109,9 @@ class NonLocalQAOA:
         self.gamma, self.beta = gamma, beta
         return costs
     
-    def predict(self, inputs, t=0.0):
+    def predict(self, inputs, t=0.0, oam=0.0):
         """Predict optimized quantum state properties."""
-        outputs = self.circuit(inputs, self.gamma, self.beta, t)
+        outputs = self.circuit(inputs, self.gamma, self.beta, t, oam)
         entanglement_measure = np.abs(np.mean(outputs))  # Simplified metric
         logger.debug("Predicted entanglement measure: %.4f", entanglement_measure)
         return entanglement_measure
